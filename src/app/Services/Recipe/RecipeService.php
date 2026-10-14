@@ -60,4 +60,10 @@ class RecipeService
         $supplierId = (int) GlobalRegistry::get('user')['supplier_id'];
         return $this->repository->recalculateOverhead($supplierId, $id);
     }
+
+    public function getPdf(int $id): array
+    {
+        $supplierId = (int) GlobalRegistry::get('user')['supplier_id'];
+        return $this->repository->getPdf($supplierId, $id);
+    }
 }

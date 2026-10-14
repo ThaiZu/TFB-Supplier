@@ -287,5 +287,6 @@
     "steps_uploading": "Uploaden...",
     "steps_move_up": "Omhoog",
     "steps_move_down": "Omlaag",
+    "recipes_download_pdf": "Recept als PDF downloaden",
     "sales_unit_carton_exceeds_ingredients": "Totale kartonhoeveelheid ({carton}) overschrijdt de totale hoeveelheid receptuurgrondstoffen ({total}). Controleer de portiegrootte of de verpakkingshoeveelheden."
 }

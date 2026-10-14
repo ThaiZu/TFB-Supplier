@@ -12,23 +12,23 @@ class CategoryService
     {
     }
 
-    public function getAll()
+    public function getAll(): array
     {
-        return $this->catalogCategoryRepository->getAll(GlobalRegistry::get('user')['supplier_id']);
+        return $this->catalogCategoryRepository->getAll((int) GlobalRegistry::get('user')['supplier_id']);
     }
 
-    public function insert($data)
+    public function insert(array $data): array
     {
-        return $this->catalogCategoryRepository->insert(GlobalRegistry::get('user')['supplier_id'], $data);
+        return $this->catalogCategoryRepository->insert((int) GlobalRegistry::get('user')['supplier_id'], $data);
     }
 
-    public function update($id, $data)
+    public function update(int $id, array $data): array
     {
-        return $this->catalogCategoryRepository->update($id, $data);
+        return $this->catalogCategoryRepository->update((int) GlobalRegistry::get('user')['supplier_id'], $id, $data);
     }
 
-    public function delete($id)
+    public function delete(int $id): array
     {
-        return $this->catalogCategoryRepository->delete($id);
+        return $this->catalogCategoryRepository->delete((int) GlobalRegistry::get('user')['supplier_id'], $id);
     }
 }

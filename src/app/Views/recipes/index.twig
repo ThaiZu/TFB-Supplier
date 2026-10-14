@@ -12,6 +12,7 @@
 .rec-pill-archived{background:#F1F5F9;color:#94A3B8;}
 .rec-action-btn{width:32px;height:32px;border-radius:6px;border:1px solid #E2E8F0;background:#fff;color:#475569;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;}
 .rec-action-btn:hover{background:#6366F1;color:#fff;border-color:#6366F1;}
+.rec-actions{display:inline-flex;gap:6px;white-space:nowrap;}
 .rec-allergen-badge{display:inline-flex;align-items:center;gap:4px;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin:2px;}
 .rec-detail-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed #E2E8F0;}
 .rec-detail-row:last-child{border-bottom:none;}
@@ -104,7 +105,7 @@
                                     <th>{{ translations.name }}</th>
                                     <th style="width:220px;">{{ translations.product }}</th>
                                     <th style="width:110px;">{{ translations.status }}</th>
-                                    <th style="width:110px;" class="text-end">{{ translations.actions }}</th>
+                                    <th style="width:130px;" class="text-end">{{ translations.actions }}</th>
                                 </tr>
                             </thead>
                             <tbody id="recipesTbody">
@@ -162,7 +163,7 @@
                     <div>
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ translations.cancel }}</button>
                         <button type="button" class="btn btn-primary" id="btnSaveRecipe">
-                            <i class="bi bi-check-lg me-1"></i>{{ translations.save }}
+                            <i class="bi bi-check me-1"></i>{{ translations.save }}
                         </button>
                     </div>
                 </div>
@@ -274,12 +275,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${productName}</td>
                 <td>${statusHtml}</td>
                 <td class="text-end">
-                    <a href="${ROOT}/recipes/${r.id}" class="rec-action-btn" title="{{ translations.edit_recipe }}">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    <a href="${ROOT}/recipes/${r.id}/steps" class="rec-action-btn" title="{{ translations.steps_page_title|default('Kroki przygotowania') }}">
-                        <i class="bi bi-list-ol"></i>
-                    </a>
+                    <span class="rec-actions">
+                        <a href="${ROOT}/recipes/${r.id}" class="rec-action-btn" title="{{ translations.edit_recipe }}">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="${ROOT}/recipes/${r.id}/steps" class="rec-action-btn" title="{{ translations.steps_page_title|default('Kroki przygotowania') }}">
+                            <i class="bi bi-list-ol"></i>
+                        </a>
+                        <a href="${ROOT}/recipes/${r.id}/pdf" class="rec-action-btn" title="{{ translations.recipes_download_pdf }}">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </span>
                 </td>
             </tr>`;
         }).join('');

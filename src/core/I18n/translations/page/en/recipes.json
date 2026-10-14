@@ -287,5 +287,6 @@
     "steps_uploading": "Uploading...",
     "steps_move_up": "Move up",
     "steps_move_down": "Move down",
+    "recipes_download_pdf": "Download recipe PDF",
     "sales_unit_carton_exceeds_ingredients": "Total carton quantity ({carton}) exceeds the total recipe ingredient quantity ({total}). Please review portion size or packaging quantities."
 }

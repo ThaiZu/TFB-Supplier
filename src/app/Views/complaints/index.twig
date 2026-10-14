@@ -97,7 +97,7 @@
                                     <td class="align-middle">
                                         <span class="fw-semibold d-block">{{ complaint.shop_name ?? '—' }}</span>
                                         <span class="text-muted d-block text-truncate" style="max-width:15rem; font-size:.78rem;"
-                                              title="{{ complaint.material_name ?? '' }}">{{ complaint.material_name ?? '—' }}</span>
+                                              title="{{ complaint.material_name ?? translations.complaints_non_product }}">{{ complaint.material_name ?? translations.complaints_non_product }}</span>
                                         {% if complaint.supplier_sku %}
                                             <span class="text-muted" style="font-size:.72rem;">SKU: {{ complaint.supplier_sku }}</span>
                                         {% endif %}
@@ -283,6 +283,7 @@
         {
             id:                  {{ complaint.id is defined ? complaint.id|json_encode|raw : 'null' }},
             complaint_key:       {{ complaint.complaint_key ? complaint.complaint_key|json_encode|raw : 'null' }},
+            complaint_type:      {{ (complaint.complaint_type ?? 'PRODUCT')|json_encode|raw }},
             shop_name:           {{ (complaint.shop_name ?? '')|json_encode|raw }},
             material_name:       {{ (complaint.material_name ?? '')|json_encode|raw }},
             supplier_sku:        {{ (complaint.supplier_sku ?? null)|json_encode|raw }},
@@ -327,6 +328,7 @@
         date_of_report:                {{ translations.complaints_col_date_of_report|json_encode|raw }},
         last_update:                   {{ translations.complaints_col_last_update|json_encode|raw }},
         attachment:                    {{ translations.complaints_attachment|json_encode|raw }},
+        non_product:                   {{ translations.complaints_non_product|json_encode|raw }},
         portal_managed:                {{ translations.complaints_portal_managed|json_encode|raw }},
         integration_managed:           {{ translations.complaints_integration_managed|json_encode|raw }},
         integration_managed_tooltip:   {{ translations.complaints_integration_managed_tooltip|json_encode|raw }},
@@ -351,10 +353,13 @@
         requested_action_refund:       {{ translations.complaints_requested_action_refund|json_encode|raw }},
         requested_action_replacement:  {{ translations.complaints_requested_action_replacement|json_encode|raw }},
         requested_action_credit:       {{ translations.complaints_requested_action_credit|json_encode|raw }},
-        compensation_method_label:     {{ translations.complaints_compensation_method_label|json_encode|raw }},
-        compensation_method_replacement: {{ translations.complaints_compensation_method_replacement|json_encode|raw }},
-        compensation_method_credit_note: {{ translations.complaints_compensation_method_credit_note|json_encode|raw }},
-        compensation_method_refund:    {{ translations.complaints_compensation_method_refund|json_encode|raw }},
+       compensation_method_label:     {{ translations.complaints_compensation_method_label|json_encode|raw }},
+        resolution_method_label:       {{ translations.complaints_resolution_method_label|json_encode|raw }},
+       compensation_method_replacement: {{ translations.complaints_compensation_method_replacement|json_encode|raw }},
+       compensation_method_credit_note: {{ translations.complaints_compensation_method_credit_note|json_encode|raw }},
+       compensation_method_refund:    {{ translations.complaints_compensation_method_refund|json_encode|raw }},
+        compensation_method_corrective_action: {{ translations.complaints_compensation_method_corrective_action|json_encode|raw }},
+        compensation_method_no_compensation: {{ translations.complaints_compensation_method_no_compensation|json_encode|raw }},
         compensation_method_other:     {{ translations.complaints_compensation_method_other|json_encode|raw }},
         compensation_method_select:    {{ translations.complaints_compensation_method_select|json_encode|raw }},
         not_specified:                 {{ translations.complaints_not_specified|json_encode|raw }},
@@ -470,7 +475,7 @@
 
         document.getElementById('modalComplaintKey').textContent = c.complaint_key ?? '';
         document.getElementById('modalShopName').textContent     = c.shop_name || '—';
-        document.getElementById('modalMaterialName').textContent = c.material_name || '—';
+        document.getElementById('modalMaterialName').textContent = c.material_name || t.non_product;
         document.getElementById('modalOrderKey').textContent     = c.order_key || '—';
         document.getElementById('modalReasonName').textContent   = c.reason_name || '—';
         document.getElementById('modalQty').textContent =
@@ -605,13 +610,15 @@
         }
 
         if (c.status === 'IN_REVIEW') {
+            const isNonProduct = c.complaint_type === 'NON_PRODUCT';
             const maxQty   = c.qty ?? 0;
             // Domyślny wybór compensation_method — bazujemy na requested_action zgłoszonej przez sklep
             const reqAct   = (c.requested_action || '').toUpperCase();
-            const defaultMethod = reqAct === 'REFUND'      ? 'REFUND'
-                                : reqAct === 'CREDIT'      ? 'CREDIT_NOTE'
-                                : reqAct === 'REPLACEMENT' ? 'REPLACEMENT'
-                                : '';
+            const defaultMethod = isNonProduct ? ''
+                : reqAct === 'REFUND'      ? 'REFUND'
+                : reqAct === 'CREDIT'      ? 'CREDIT_NOTE'
+                : reqAct === 'REPLACEMENT' ? 'REPLACEMENT'
+                : '';
             const sel = (v) => defaultMethod === v ? 'selected' : '';
             const reqHint = c.requested_action
                 ? `<div class="form-text">${t.requested_action}: <strong>${escHtml(labelRequestedAction(c.requested_action))}</strong></div>`
@@ -623,21 +630,28 @@
                     <div class="card-body">
                         <h6 class="mb-3"><i class="bi bi-lightning me-2 text-primary"></i>${t.actions}</h6>
 
-                        <div class="mb-3">
-                            <label class="form-label small text-muted mb-1">${t.accepted_qty}</label>
-                            <input type="number" id="actionAcceptedQty" class="form-control"
-                                   min="0" max="${maxQty}" step="0.001" value="${maxQty}">
-                            <div class="form-text">${t.accepted_qty_hint}</div>
-                        </div>
+                        ${isNonProduct ? '' : `
+                            <div class="mb-3">
+                                <label class="form-label small text-muted mb-1">${t.accepted_qty}</label>
+                                <input type="number" id="actionAcceptedQty" class="form-control"
+                                       min="0" max="${maxQty}" step="0.001" value="${maxQty}">
+                                <div class="form-text">${t.accepted_qty_hint}</div>
+                            </div>`}
 
                         <div class="mb-3">
-                            <label class="form-label small text-muted mb-1">${t.compensation_method_label}</label>
+                            <label class="form-label small text-muted mb-1">${isNonProduct ? t.resolution_method_label : t.compensation_method_label}</label>
                             <select id="actionCompensationMethod" class="form-select">
                                 <option value="" ${defaultMethod === '' ? 'selected' : ''}>${t.compensation_method_select}</option>
-                                <option value="REPLACEMENT" ${sel('REPLACEMENT')}>${t.compensation_method_replacement}</option>
-                                <option value="CREDIT_NOTE" ${sel('CREDIT_NOTE')}>${t.compensation_method_credit_note}</option>
-                                <option value="REFUND"      ${sel('REFUND')}>${t.compensation_method_refund}</option>
-                                <option value="OTHER">${t.compensation_method_other}</option>
+                                ${isNonProduct ? `
+                                    <option value="CORRECTIVE_ACTION">${t.compensation_method_corrective_action}</option>
+                                    <option value="CREDIT_NOTE">${t.compensation_method_credit_note}</option>
+                                    <option value="NO_COMPENSATION">${t.compensation_method_no_compensation}</option>
+                                    <option value="OTHER">${t.compensation_method_other}</option>`
+                                : `
+                                    <option value="REPLACEMENT" ${sel('REPLACEMENT')}>${t.compensation_method_replacement}</option>
+                                    <option value="CREDIT_NOTE" ${sel('CREDIT_NOTE')}>${t.compensation_method_credit_note}</option>
+                                    <option value="REFUND"      ${sel('REFUND')}>${t.compensation_method_refund}</option>
+                                    <option value="OTHER">${t.compensation_method_other}</option>`}
                             </select>
                             ${reqHint}
                         </div>
@@ -649,7 +663,7 @@
                         </div>
 
                         <div class="d-flex gap-2">
-                            <button class="btn btn-primary flex-grow-1" onclick="acceptComplaint(${c.id}, ${maxQty})">
+                            <button class="btn btn-primary flex-grow-1" onclick="acceptComplaint(${c.id}, ${maxQty}, ${isNonProduct})">
                                 <i class="bi bi-check2-square me-1"></i>${t.action_accept}
                             </button>
                             <button class="btn btn-outline-danger" onclick="rejectComplaint(${c.id})">
@@ -682,26 +696,30 @@
         });
     }
 
-    function acceptComplaint(id, maxQty) {
+    function acceptComplaint(id, maxQty, isNonProduct = false) {
         const qtyInput     = document.getElementById('actionAcceptedQty');
         const qty          = parseFloat(qtyInput?.value ?? maxQty);
         const response     = document.getElementById('actionResponse')?.value?.trim() ?? '';
         const compensation = document.getElementById('actionCompensationMethod')?.value ?? '';
 
-        if (isNaN(qty) || qty < 0) {
-            showSnack(false, t.invalid_qty);
-            return;
-        }
-        if (qty > maxQty) {
-            showSnack(false, t.qty_exceeds);
-            return;
+        if (!isNonProduct) {
+            if (isNaN(qty) || qty < 0) {
+                showSnack(false, t.invalid_qty);
+                return;
+            }
+            if (qty > maxQty) {
+                showSnack(false, t.qty_exceeds);
+                return;
+            }
         }
 
         const payload = {
             status:              'ACCEPTED',
-            accepted_qty:        qty,
             production_response: response
         };
+        if (!isNonProduct) {
+            payload.accepted_qty = qty;
+        }
         if (compensation) {
             payload.compensation_method = compensation;
         }

@@ -43,6 +43,11 @@ class ProductRepository
         return $this->apiClient->patch("/material-suppliers/catalog/products/{$id}", $data);
     }
 
+    public function updateAvailability(int $supplierId, int $productId, array $data)
+    {
+        return $this->apiClient->put("/material-suppliers/{$supplierId}/catalog/products/{$productId}/availability", $data);
+    }
+
     public function updateSpecification($id, $data)
     {
         return $this->apiClient->post("/material-suppliers/catalog/products/{$id}/specification", $data);

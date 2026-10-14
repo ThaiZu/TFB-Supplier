@@ -34,6 +34,15 @@ class ProductService
         return $this->catalogProductRepository->update($id, $data);
     }
 
+    public function updateAvailability(int $productId, array $data)
+    {
+        return $this->catalogProductRepository->updateAvailability(
+            (int) GlobalRegistry::get('user')['supplier_id'],
+            $productId,
+            $data
+        );
+    }
+
     public function updateSpecification($id, $data)
     {
         return $this->catalogProductRepository->updateSpecification($id, $data);

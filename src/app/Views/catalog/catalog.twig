@@ -80,6 +80,9 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-secondary" id="btnManageCategories" type="button">
+                            <i class="bi bi-tags me-1"></i>{{ translations.manage_categories }}
+                        </button>
                         <button class="btn btn-primary" id="btnAddProduct">
                             <i class="bi bi-plus-lg me-1"></i>{{ translations.add_product }}
                         </button>
@@ -96,6 +99,9 @@
                             <label class="form-label">{{ translations.filter_and_search }}</label>
 
                             <div class="d-flex flex-column flex-md-row gap-2">
+                                <select id="filterCategory" class="form-select" aria-label="{{ translations.category }}">
+                                    <option value="">{{ translations.all_categories }}</option>
+                                </select>
                                 <input id="filterSearch"
                                        type="text"
                                        class="form-control"
@@ -124,6 +130,35 @@
                         </div>
                     </div>
 
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label mb-1">{{ translations.filter_availability }}</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input availability-filter" type="checkbox" role="switch" id="filterAvailabilityAlways">
+                                    <label class="form-check-label" for="filterAvailabilityAlways">{{ translations.availability_always }}</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input availability-filter" type="checkbox" role="switch" id="filterAvailabilityScheduled">
+                                    <label class="form-check-label" for="filterAvailabilityScheduled">{{ translations.availability_scheduled }}</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label mb-1">{{ translations.filter_stock }}</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input availability-filter" type="checkbox" role="switch" id="filterStockUnlimited">
+                                    <label class="form-check-label" for="filterStockUnlimited">{{ translations.stock_unlimited }}</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input availability-filter" type="checkbox" role="switch" id="filterStockLimited">
+                                    <label class="form-check-label" for="filterStockLimited">{{ translations.stock_limited }}</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="productsGrid" class="products-grid">
                         <div class="pg-empty"><i class="bi bi-hourglass-split"></i><span>{{ translations.loading }}</span></div>
                     </div>
@@ -143,6 +178,29 @@
 
     {# MODAL: ADD/EDIT PRODUCT #}
     {% include "catalog/modals/product_manage.twig" %}
+    {% include "catalog/modals/product_availability.twig" %}
+
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-tags me-2"></i>{{ translations.manage_categories }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">{{ translations.category_modal_hint }}</p>
+                    <ul class="list-group mb-3" id="categoryList" style="max-height:260px;overflow-y:auto;"></ul>
+                    <div class="input-group">
+                        <input type="hidden" id="categoryEditId">
+                        <input type="text" class="form-control" id="categoryName" maxlength="255" placeholder="{{ translations.category_name }}">
+                        <button type="button" class="btn btn-primary" id="btnSaveCategory" title="{{ translations.save }}"><i class="bi bi-check"></i></button>
+                        <button type="button" class="btn btn-light" id="btnCancelCategoryEdit" style="display:none;" title="{{ translations.cancel }}"><i class="bi bi-x"></i></button>
+                    </div>
+                    <div class="invalid-feedback d-block" id="errCategoryName"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {# MODAL: ALLERGENS #}
     {% include "catalog/modals/allergen.twig" %}
@@ -195,7 +253,7 @@
                         </div>
                         <div class="d-flex gap-2 mt-3">
                             <button type="button" class="btn btn-success" id="btnCropSave">
-                                <i class="bi bi-check-lg me-1"></i>
+                                <i class="bi bi-check me-1"></i>
                                 {{ translations.catalog_photo_crop_save|default('Przytnij i zapisz') }}
                             </button>
                             <button type="button" class="btn btn-outline-secondary" id="btnCropCancel">
@@ -269,6 +327,7 @@
             // =========================
             const state = {
                 products: [],
+                categories: [],
                 loading: false,
                 modalMode: 'add', // add | edit
                 editId: null
@@ -276,6 +335,125 @@
 
             const productModal   = new bootstrap.Modal(el("productModal"));
             const allergensModal = new bootstrap.Modal(el("allergensModal"));
+            const availabilityModal = new bootstrap.Modal(el("productAvailabilityModal"));
+            const categoryModal = new bootstrap.Modal(el("categoryModal"));
+            const SwalToast = Swal.mixin({
+                toast: true, position: 'top-end',
+                showConfirmButton: false, timer: 3000, timerProgressBar: true,
+            });
+            let availabilityProductId = null;
+
+            function renderCategoryOptions(selectId, selected = null) {
+                const select = el(selectId);
+                if (!select) return;
+                const current = selected === null ? select.value : String(selected || '');
+                const allLabel = {{ translations.all_categories|json_encode|raw }};
+                const noneLabel = {{ translations.no_category|json_encode|raw }};
+                const isFilter = selectId === 'filterCategory';
+                const initialOptions = isFilter
+                    ? `<option value="">${escapeHtml(allLabel)}</option><option value="__uncategorized__">${escapeHtml(noneLabel)}</option>`
+                    : `<option value="">${escapeHtml(noneLabel)}</option>`;
+                select.innerHTML = initialOptions +
+                    state.categories.map(category =>
+                        `<option value="${escapeHtml(String(category.id))}">${escapeHtml(category.name)}</option>`
+                    ).join('');
+                select.value = current;
+            }
+
+            function renderCategoryList() {
+                const list = el('categoryList');
+                if (!state.categories.length) {
+                    list.innerHTML = `<li class="list-group-item text-muted small">{{ translations.no_categories|json_encode|raw }}</li>`;
+                    return;
+                }
+                list.innerHTML = state.categories.map(category => `
+                    <li class="list-group-item d-flex align-items-center justify-content-between gap-2">
+                        <span>${escapeHtml(category.name)}</span>
+                        <span class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-light category-edit" data-id="${escapeHtml(String(category.id))}" title="{{ translations.edit|json_encode|raw }}"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger category-delete" data-id="${escapeHtml(String(category.id))}" title="{{ translations.delete|json_encode|raw }}"><i class="bi bi-trash"></i></button>
+                        </span>
+                    </li>`).join('');
+            }
+
+            function refreshCategoryUi() {
+                renderCategoryOptions('filterCategory');
+                renderCategoryOptions('productCategory');
+                renderCategoryList();
+            }
+
+            async function loadCategories() {
+                const response = await api('/ajax/catalog/categories', { method: 'GET' });
+                if (!(response.success || response.ok)) {
+                    throw new Error(response.message || {{ translations.category_load_failed|json_encode|raw }});
+                }
+                state.categories = Array.isArray(response.data) ? response.data : [];
+                refreshCategoryUi();
+            }
+
+            function resetCategoryForm() {
+                el('categoryEditId').value = '';
+                el('categoryName').value = '';
+                el('errCategoryName').textContent = '';
+                el('btnCancelCategoryEdit').style.display = 'none';
+            }
+
+            function openCategoryModal() {
+                resetCategoryForm();
+                renderCategoryList();
+                categoryModal.show();
+            }
+
+            async function saveCategory() {
+                const name = el('categoryName').value.trim();
+                const id = el('categoryEditId').value;
+                el('errCategoryName').textContent = '';
+                if (!name) {
+                    el('errCategoryName').textContent = {{ translations.field_required|json_encode|raw }};
+                    return;
+                }
+                el('btnSaveCategory').disabled = true;
+                try {
+                    const response = id
+                        ? await api(`/ajax/catalog/categories/${id}`, { method: 'PATCH', data: { name } })
+                        : await api('/ajax/catalog/categories', { method: 'POST', data: { name } });
+                    if (!(response.success || response.ok)) {
+                        el('errCategoryName').textContent = response.description || response.message || {{ translations.category_save_failed|json_encode|raw }};
+                        return;
+                    }
+                    await loadCategories();
+                    resetCategoryForm();
+                } catch (error) {
+                    el('errCategoryName').textContent = error.message || {{ translations.category_save_failed|json_encode|raw }};
+                } finally {
+                    el('btnSaveCategory').disabled = false;
+                }
+            }
+
+            async function deleteCategory(id) {
+                const confirmation = await Swal.fire({
+                    icon: 'warning',
+                    title: {{ translations.delete_category|json_encode|raw }},
+                    text: {{ translations.category_delete_confirm|json_encode|raw }},
+                    showCancelButton: true,
+                    confirmButtonText: {{ translations.delete|json_encode|raw }},
+                    cancelButtonText: {{ translations.cancel|json_encode|raw }},
+                });
+                if (!confirmation.isConfirmed) return;
+                try {
+                    const response = await api(`/ajax/catalog/categories/${id}`, { method: 'DELETE' });
+                    if (!(response.success || response.ok)) {
+                        throw new Error(response.description || response.message || {{ translations.category_delete_failed|json_encode|raw }});
+                    }
+                    await loadCategories();
+                    state.products = state.products.map(product => String(product.category_id) === String(id)
+                        ? { ...product, category_id: null, category_name: null }
+                        : product);
+                    renderGrid();
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: {{ translations.error|json_encode|raw }}, text: error.message || {{ translations.category_delete_failed|json_encode|raw }} });
+                }
+            }
 
             function setLoading(isLoading) {
                 state.loading = isLoading;
@@ -319,6 +497,15 @@
             function getFilteredProducts() {
                 const q = (el("filterSearch").value || "").trim().toLowerCase();
                 const statusFilter = el("filterStatus").value;
+                const categoryFilter = el('filterCategory').value;
+                const availabilityModes = [
+                    el('filterAvailabilityAlways').checked ? 'ALWAYS' : null,
+                    el('filterAvailabilityScheduled').checked ? 'SCHEDULED' : null,
+                ].filter(Boolean);
+                const stockModes = [
+                    el('filterStockUnlimited').checked ? 'UNLIMITED' : null,
+                    el('filterStockLimited').checked ? 'LIMITED' : null,
+                ].filter(Boolean);
 
                 return state.products.filter(p => {
 
@@ -328,6 +515,13 @@
                     const hay = `${p.sku||""} ${p.name||""} ${allergensText} ${pkg}`.toLowerCase();
 
                     const matchQ = !q || hay.includes(q);
+                    const hasNoCategory = p.category_id === null
+                        || p.category_id === undefined
+                        || p.category_id === '';
+                    const matchCategory = !categoryFilter
+                        || (categoryFilter === '__uncategorized__'
+                            ? hasNoCategory
+                            : String(p.category_id) === categoryFilter);
 
                     // Filtrowanie po statusie
                     let matchStatus = true;
@@ -338,7 +532,12 @@
                     }
                     // dla 'all' matchStatus pozostaje true
 
-                    return matchQ && matchStatus;
+                    const availabilityMode = String(p.availability?.mode || 'ALWAYS').toUpperCase();
+                    const stockMode = String(p.stock?.mode || 'UNLIMITED').toUpperCase();
+                    const matchAvailability = !availabilityModes.length || availabilityModes.includes(availabilityMode);
+                    const matchStock = !stockModes.length || stockModes.includes(stockMode);
+
+                    return matchQ && matchCategory && matchStatus && matchAvailability && matchStock;
                 });
             }
 
@@ -355,6 +554,11 @@
                 const tAllergens = {{ translations.allergens|json_encode|raw }};
                 const tSpec      = {{ translations.specification|default('Specification')|json_encode|raw }};
                 const tUploadPhoto = {{ translations.catalog_upload_photo|default('Dodaj zdjęcie')|json_encode|raw }};
+                const tAvailability = {{ translations.availability_stock_title|json_encode|raw }};
+                const tAlways = {{ translations.availability_always|json_encode|raw }};
+                const tScheduled = {{ translations.availability_scheduled|json_encode|raw }};
+                const tUnlimited = {{ translations.stock_unlimited|json_encode|raw }};
+                const tAvailable = {{ translations.stock_available|json_encode|raw }};
 
                 if (state.loading) {
                     grid.innerHTML = `<div class="pg-empty"><i class="bi bi-hourglass-split"></i><span>${escapeHtml(tLoading)}</span></div>`;
@@ -375,8 +579,15 @@
                     const pkgUnit = p.package_unit ?? "";
                     const pkgText = (pkgQty || pkgUnit) ? `${pkgQty} ${pkgUnit}`.trim() : "";
                     const hasAllergens = Array.isArray(p.allergens) && p.allergens.length > 0;
+                    const categoryName = (p.category_name || '').trim();
 
                     const hasPhoto = p.photo_url ? true : false;
+                    const availability = p.availability || {};
+                    const stock = p.stock || {};
+                    const availabilityLabel = availability.mode === 'SCHEDULED' ? tScheduled : tAlways;
+                    const stockLabel = stock.mode === 'LIMITED'
+                        ? `${tAvailable}: ${stock.available ?? 0}`
+                        : tUnlimited;
     return `<div class="product-card" data-id="${escapeHtml(String(p.id))}">
   <div class="product-img">
     ${hasPhoto ? `<img src="${escapeHtml(p.photo_url)}" alt="${escapeHtml(name)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
@@ -387,6 +598,7 @@
     <div class="pc-overlay">
       <button class="pc-act-btn btn-upload-photo" title="${escapeHtml(tUploadPhoto)}" type="button"><i class="bi bi-camera-fill"></i></button>
       <button class="pc-act-btn btn-edit" title="${escapeHtml(tEdit)}" type="button"><i class="bi bi-pencil-fill"></i></button>
+      <button class="pc-act-btn btn-availability" title="${escapeHtml(tAvailability)}" type="button"><i class="bi bi-calendar-range"></i></button>
       <button class="pc-act-btn btn-allergens" title="${escapeHtml(tAllergens)}" type="button"><i class="bi bi-shield-check"></i></button>
       <button class="pc-act-btn btn-specification" title="${escapeHtml(tSpec)}" type="button"><i class="bi bi-list-check"></i></button>
     </div>
@@ -397,11 +609,16 @@
       <span class="pc-pill ${active ? 'pc-pill-active' : 'pc-pill-inactive'}">${active ? escapeHtml(tActive) : escapeHtml(tInactive)}</span>
     </div>
     ${sku ? `<div class="product-ref"><code style="font-size:10px">${escapeHtml(sku)}</code></div>` : ''}
+    ${categoryName ? `<div class="product-meta"><span class="pc-badge"><i class="bi bi-tag me-1"></i>${escapeHtml(categoryName)}</span></div>` : ''}
     ${(pkgText || p.weight_grams || p.shelf_life_days) ? `<div class="product-meta">
       ${pkgText ? `<span class="pc-badge">${escapeHtml(pkgText)}</span>` : ''}
       ${p.weight_grams ? `<span class="pc-badge">${escapeHtml(String(p.weight_grams) + (p.weight_unit || 'g'))}</span>` : ''}
       ${p.shelf_life_days ? `<span class="pc-badge">${escapeHtml(String(p.shelf_life_days) + 'd')}</span>` : ''}
     </div>` : ''}
+    <div class="product-meta">
+      <span class="pc-badge">${escapeHtml(availabilityLabel)}</span>
+      <span class="pc-badge">${escapeHtml(stockLabel)}</span>
+    </div>
     ${hasAllergens ? `<div class="pc-allergens">${renderAllergensBadges(p.allergens)}</div>` : ''}
   </div>
 </div>`;
@@ -483,6 +700,7 @@
                 el("productPackageSize").value = "";
                 el("productPackageUnit").value = "pcs";
                 el("productVatRate").value = "0";
+                renderCategoryOptions('productCategory', '');
 
                 // NOWE pola - podstawowe
                 el("productActive").checked = true;
@@ -509,6 +727,7 @@
                 el("productPackageSize").value = product.package_size ?? "";
                 el("productPackageUnit").value = product.package_unit ?? "pcs";
                 el("productVatRate").value = product.vat_rate ?? "0";
+                renderCategoryOptions('productCategory', product.category_id ?? '');
 
                 // NOWE pola - podstawowe
                 el("productActive").checked = (product.active !== 0 && product.active !== false && product.active !== null);
@@ -532,6 +751,7 @@
                     package_size: el("productPackageSize").value ? Number(el("productPackageSize").value) : null,
                     package_unit: el("productPackageUnit").value || "pcs",
                     vat_rate: el("productVatRate").value || "0",
+                    category_id: el('productCategory').value || null,
 
                     // NOWE pola
                     // API expects numeric active flag; send 1 for true, 0 for false
@@ -576,16 +796,26 @@
 
                     if (resp.success || resp.ok) {
                         productModal.hide();
+                        if (state.modalMode === 'edit') {
+                            const category = state.categories.find(item => String(item.id) === String(payload.category_id));
+                            state.products = state.products.map(product => String(product.id) === String(state.editId)
+                                ? {
+                                    ...product,
+                                    ...payload,
+                                    active: payload.is_active,
+                                    category_id: payload.category_id === null ? null : Number(payload.category_id),
+                                    category_name: category ? category.name : null,
+                                }
+                                : product);
+                            renderGrid();
+                        } else {
+                            await loadProducts();
+                        }
 
-                        Swal.fire({
+                        SwalToast.fire({
                             icon: 'success',
-                            title: {{ translations.success|json_encode|raw }},
-                            text: {{ translations.operation_successful|json_encode|raw }},
-                            timer: 1200,
-                            showConfirmButton: false
+                            title: {{ translations.operation_successful|json_encode|raw }}
                         });
-
-                        await loadProducts();
                     } else {
                         if (resp.errors) {
                             applyErrors(resp.errors);
@@ -1118,23 +1348,141 @@
                 });
             }
 
+            function renderAvailabilityPeriodRow(period = {}) {
+                const row = document.createElement('div');
+                row.className = 'row g-2 align-items-end availability-period-row';
+                row.innerHTML = `
+                    <div class="col-12 col-sm-5"><label class="form-label small mb-1">{{ translations.available_from|json_encode|raw }}</label><input type="date" class="form-control availability-from" value="${escapeHtml(period.available_from || '')}"></div>
+                    <div class="col-12 col-sm-5"><label class="form-label small mb-1">{{ translations.available_to|json_encode|raw }}</label><input type="date" class="form-control availability-to" value="${escapeHtml(period.available_to || '')}"></div>
+                    <div class="col-12 col-sm-2"><button type="button" class="btn btn-outline-danger w-100 btn-remove-availability-period"><i class="bi bi-trash"></i></button></div>`;
+                el('availabilityPeriodsList').appendChild(row);
+            }
+
+            function toggleAvailabilityFields() {
+                el('availabilityPeriodsSection').style.display = el('availabilityMode').value === 'SCHEDULED' ? '' : 'none';
+                el('stockOnHandSection').style.display = el('stockMode').value === 'LIMITED' ? '' : 'none';
+            }
+
+            function openAvailabilityModal(product) {
+                availabilityProductId = product.id;
+                const availability = product.availability || {};
+                const stock = product.stock || {};
+                el('availabilityProductName').textContent = product.name || '';
+                el('availabilityMode').value = availability.mode === 'SCHEDULED' ? 'SCHEDULED' : 'ALWAYS';
+                el('stockMode').value = stock.mode === 'LIMITED' ? 'LIMITED' : 'UNLIMITED';
+                el('stockOnHand').value = stock.on_hand ?? '';
+                const reserved = Number(stock.reserved || 0);
+                el('stockReservedInfo').textContent = reserved > 0
+                    ? {{ translations.stock_reserved_info|json_encode|raw }}.replace(':value', reserved)
+                    : '';
+                el('availabilityPeriodsList').innerHTML = '';
+                (availability.periods || []).forEach(renderAvailabilityPeriodRow);
+                if (el('availabilityMode').value === 'SCHEDULED' && !(availability.periods || []).length) {
+                    renderAvailabilityPeriodRow();
+                }
+                toggleAvailabilityFields();
+                availabilityModal.show();
+            }
+
+            async function saveAvailability() {
+                if (!availabilityProductId) return;
+                const availabilityMode = el('availabilityMode').value;
+                const stockMode = el('stockMode').value;
+                const periods = [...document.querySelectorAll('.availability-period-row')].map(row => ({
+                    available_from: row.querySelector('.availability-from').value,
+                    available_to: row.querySelector('.availability-to').value,
+                }));
+                if (availabilityMode === 'SCHEDULED' && (!periods.length || periods.some(p => !p.available_from || !p.available_to))) {
+                    Swal.fire({ icon: 'error', title: {{ translations.error|json_encode|raw }}, text: {{ translations.availability_period_required|json_encode|raw }} });
+                    return;
+                }
+                const stockOnHand = el('stockOnHand').value;
+                if (stockMode === 'LIMITED' && (stockOnHand === '' || Number(stockOnHand) < 0)) {
+                    Swal.fire({ icon: 'error', title: {{ translations.error|json_encode|raw }}, text: {{ translations.stock_on_hand_required|json_encode|raw }} });
+                    return;
+                }
+
+                el('btnSaveAvailability').disabled = true;
+                try {
+                    const resp = await api(`/ajax/catalog/products/${availabilityProductId}/availability`, {
+                        method: 'PUT',
+                        data: {
+                            availability_mode: availabilityMode,
+                            periods,
+                            stock_mode: stockMode,
+                            stock_on_hand: stockMode === 'LIMITED' ? Number(stockOnHand) : null,
+                        },
+                    });
+                    if (resp.success || resp.ok) {
+                        const updated = resp.data?.data || resp.data || resp;
+                        const product = state.products.find(p => String(p.id) === String(availabilityProductId));
+                        if (product) {
+                            product.availability = updated.availability || product.availability;
+                            product.stock = updated.stock || product.stock;
+                        }
+                        renderGrid();
+                        availabilityModal.hide();
+                        Swal.fire({ icon: 'success', title: {{ translations.success|json_encode|raw }}, text: {{ translations.operation_successful|json_encode|raw }}, timer: 1200, showConfirmButton: false });
+                    } else {
+                        Swal.fire({ icon: 'error', title: {{ translations.error|json_encode|raw }}, text: resp.message || {{ translations.undefined_error_occurred|json_encode|raw }} });
+                    }
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({ icon: 'error', title: {{ translations.error|json_encode|raw }}, text: {{ translations.no_api_connection|json_encode|raw }} });
+                } finally {
+                    el('btnSaveAvailability').disabled = false;
+                }
+            }
+
             // =========================
             // Bind events
             // =========================
             function bindEvents() {
                 el("btnAddProduct").addEventListener("click", openCreateModal);
                 el("btnImportProducts").addEventListener("click", openImportModal);
+                el('btnManageCategories').addEventListener('click', openCategoryModal);
 
                 el("btnClearFilters").addEventListener("click", async () => {
                     el("filterSearch").value = "";
+                    el('filterCategory').value = '';
                     el("filterStatus").value = "all";
+                    document.querySelectorAll('.availability-filter').forEach(input => { input.checked = false; });
                     renderGrid();
                 });
 
                 el("filterSearch").addEventListener("input", () => renderGrid());
+                el('filterCategory').addEventListener('change', () => renderGrid());
                 el("filterStatus").addEventListener("change", () => renderGrid());
+                document.querySelectorAll('.availability-filter').forEach(input => {
+                    input.addEventListener('change', () => renderGrid());
+                });
 
                 el("btnSaveProduct").addEventListener("click", saveProduct);
+                el('btnSaveCategory').addEventListener('click', saveCategory);
+                el('btnCancelCategoryEdit').addEventListener('click', resetCategoryForm);
+                el('categoryList').addEventListener('click', (event) => {
+                    const edit = event.target.closest('.category-edit');
+                    const remove = event.target.closest('.category-delete');
+                    if (edit) {
+                        const category = state.categories.find(item => String(item.id) === String(edit.dataset.id));
+                        if (!category) return;
+                        el('categoryEditId').value = category.id;
+                        el('categoryName').value = category.name;
+                        el('errCategoryName').textContent = '';
+                        el('btnCancelCategoryEdit').style.display = '';
+                        el('categoryName').focus();
+                    } else if (remove) {
+                        deleteCategory(remove.dataset.id);
+                    }
+                });
+                el('availabilityMode').addEventListener('change', toggleAvailabilityFields);
+                el('stockMode').addEventListener('change', toggleAvailabilityFields);
+                el('btnAddAvailabilityPeriod').addEventListener('click', () => renderAvailabilityPeriodRow());
+                el('availabilityPeriodsList').addEventListener('click', (ev) => {
+                    const button = ev.target.closest('.btn-remove-availability-period');
+                    if (button) button.closest('.availability-period-row').remove();
+                });
+                el('btnSaveAvailability').addEventListener('click', saveAvailability);
 
                 // Import modal events
                 el("importFileInput").addEventListener("change", handleFileSelect);
@@ -1144,10 +1492,6 @@
                 // Photo modal
                 // ==========================
                 const photoModal     = new bootstrap.Modal(el('photoModal'));
-                const SwalToast = Swal.mixin({
-                    toast: true, position: 'top-end',
-                    showConfirmButton: false, timer: 3000, timerProgressBar: true,
-                });
 
                 let _photoProductId  = null;   // ID produktu otwartego w modalu
                 let _photoCropper    = null;    // aktywna instancja Croppera
@@ -1303,6 +1647,7 @@
 
                     if (ev.target.closest(".btn-upload-photo")) { openPhotoModal(product); return; }
                     if (ev.target.closest(".btn-edit")) return openEditModal(product);
+                    if (ev.target.closest(".btn-availability")) return openAvailabilityModal(product);
                     if (ev.target.closest(".btn-delete")) return confirmDelete(product);
                     if (ev.target.closest(".btn-allergens")) return openAllergensModal(product);
                     if (ev.target.closest(".btn-specification")) return openSpecificationModal(product);
@@ -1390,6 +1735,7 @@
 
             async function init() {
                 bindEvents();
+                await loadCategories();
                 await loadProducts();
             }
 

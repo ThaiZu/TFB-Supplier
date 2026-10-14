@@ -110,6 +110,16 @@ class SupplierOrderRepository
         return $this->apiClient->post("/material-suppliers/{$supplierId}/orders/{$orderId}/documents/cmr", []);
     }
 
+    public function createInvoice(int $supplierId, int $orderId, array $payload): array
+    {
+        return $this->apiClient->post("/material-suppliers/{$supplierId}/orders/{$orderId}/invoices", $payload);
+    }
+
+    public function getInvoicePdf(int $supplierId, int $orderId, int $invoiceId): array
+    {
+        return $this->apiClient->get("/material-suppliers/{$supplierId}/orders/{$orderId}/invoices/{$invoiceId}/pdf", false);
+    }
+
     public function getOrderDocument(int $supplierId, int $orderId, int $documentId): array
     {
         return $this->apiClient->get("/material-suppliers/{$supplierId}/orders/{$orderId}/documents/{$documentId}", false);

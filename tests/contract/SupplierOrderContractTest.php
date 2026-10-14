@@ -100,6 +100,7 @@ $repository->updateCarrier(7, 12, ['name' => 'Carrier', 'driver_name' => 'Jan Ko
 $repository->deleteCarrier(7, 12);
 $repository->finalizationCheck(7, 11, ['version' => 3]);
 $repository->generateDifferencesDocument(7, 11);
+$repository->createInvoice(7, 11, ['due_date' => '2026-09-17']);
 
 assertSameContract(['method' => 'GET', 'endpoint' => '/material-suppliers/7/orders/11/read-model', 'payload' => null], $client->calls[0], 'read-model endpoint mismatch');
 assertSameContract('PUT', $client->calls[1]['method'], 'final-items method mismatch');
@@ -119,6 +120,7 @@ assertSameContract('DELETE', $client->calls[5]['method'], 'carrier delete method
 assertSameContract('/material-suppliers/7/carriers/12', $client->calls[5]['endpoint'], 'carrier delete endpoint mismatch');
 assertSameContract(['version' => 3], $client->calls[6]['payload'], 'finalization-check payload mismatch');
 assertSameContract('/material-suppliers/7/orders/11/documents/difference', $client->calls[7]['endpoint'], 'difference document endpoint mismatch');
+assertSameContract(['method' => 'POST', 'endpoint' => '/material-suppliers/7/orders/11/invoices', 'payload' => ['due_date' => '2026-09-17']], $client->calls[8], 'invoice create endpoint mismatch');
 
 $view = file_get_contents(__DIR__ . '/../../src/app/Views/orders/show.twig');
 assertSameContract(false, str_contains($view, 'documents/differences'), 'view still references plural differences endpoint');
@@ -139,6 +141,11 @@ assertSameContract(true, str_contains($view, 'carrierSavedTitle'), 'view does no
 assertSameContract(true, str_contains($view, 'dripicons-trash'), 'view does not use trash icon for carrier deactivate');
 assertSameContract(true, str_contains($view, '<thead><tr><th'), 'view does not render carrier table headers');
 assertSameContract(true, substr_count($view, 'window.location.reload()') >= 8, 'view does not refetch after expected mutations');
+assertSameContract(true, str_contains($view, 'documents-generate-invoice'), 'view does not expose invoice creation action');
+assertSameContract(true, str_contains($view, 'id="invoice-create-modal"'), 'view does not render invoice creation modal');
+assertSameContract(true, str_contains($view, 'id="invoice-due-date"'), 'view does not render invoice due date input');
+assertSameContract(true, str_contains($view, 'due_date: invoiceDueDateInput.value'), 'view does not submit the invoice due date');
+assertSameContract(true, str_contains($view, 'js-invoice-download'), 'view does not expose invoice download action');
 
 $routes = file_get_contents(__DIR__ . '/../../src/core/Bootstrap/Routes/OrdersRoutes.php');
 assertSameContract(false, str_contains($routes, 'documents/differences'), 'routes still expose plural differences endpoint');
@@ -147,6 +154,7 @@ assertSameContract(false, str_contains($routes, "addRoute('PUT', '/ajax/orders/c
 assertSameContract(true, str_contains($routes, "addRoute('PATCH', '/ajax/orders/carriers"), 'routes do not expose PATCH carrier update');
 assertSameContract(true, str_contains($routes, "addRoute('DELETE', '/ajax/orders/carriers"), 'routes do not expose DELETE carrier deactivate');
 assertSameContract(true, str_contains($routes, '/documents/difference'), 'routes do not expose singular difference endpoint');
+assertSameContract(true, str_contains($routes, '/ajax/orders/{orderId:\d+}/invoices'), 'routes do not expose invoice creation');
 assertSameContract(true, str_contains(file_get_contents(__DIR__ . '/../../src/app/Repositories/Me/SupplierOrderRepository.php'), 'include_inactive=1'), 'carrier list proxy does not request inactive records');
 
 echo "Supplier order contract tests passed.\n";

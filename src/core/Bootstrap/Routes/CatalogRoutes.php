@@ -14,6 +14,26 @@ return function(RouteCollector $r) {
 
 
     // AJAX: products
+    $r->addRoute('GET', '/ajax/catalog/categories', [
+        'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogCategoryController::class,
+        'method'     => 'ajaxGetAll'
+    ]);
+
+    $r->addRoute('POST', '/ajax/catalog/categories', [
+        'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogCategoryController::class,
+        'method'     => 'ajaxInsert'
+    ]);
+
+    $r->addRoute('PATCH', '/ajax/catalog/categories/{id:\d+}', [
+        'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogCategoryController::class,
+        'method'     => 'ajaxUpdate'
+    ]);
+
+    $r->addRoute('DELETE', '/ajax/catalog/categories/{id:\d+}', [
+        'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogCategoryController::class,
+        'method'     => 'ajaxDelete'
+    ]);
+
     $r->addRoute('GET', '/ajax/catalog/products', [
         'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogProductController::class,
         'method'     => 'ajaxGetAll'
@@ -37,6 +57,11 @@ return function(RouteCollector $r) {
     $r->addRoute('PUT', '/ajax/catalog/products/{id:\d+}', [
         'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogProductController::class,
         'method'     => 'ajaxUpdate'
+    ]);
+
+    $r->addRoute('PUT', '/ajax/catalog/products/{id:\d+}/availability', [
+        'controller' => \App\Supplier\app\Http\Controllers\Catalog\CatalogProductController::class,
+        'method'     => 'ajaxUpdateAvailability'
     ]);
 
     $r->addRoute('DELETE', '/ajax/catalog/products/{id:\d+}', [

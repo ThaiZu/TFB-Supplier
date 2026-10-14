@@ -6,6 +6,8 @@ class ProductModel implements \JsonSerializable
 {
     private $id;
     private $supplier_id;
+    private $category_id;
+    private $category_name;
     private $sku;
     private $name;
     private $package_size;
@@ -19,12 +21,16 @@ class ProductModel implements \JsonSerializable
     private $specification = [];
     private $allergens = [];
     private $photo_url;
+    private $availability = [];
+    private $stock = [];
 
     public function __construct($data)
     {
         $this->id               = $data['id'];
         $this->name             = $data['name'];
         $this->supplier_id      = $data['supplier_id'] ?? null;
+        $this->category_id      = $data['category_id'] ?? null;
+        $this->category_name    = $data['category_name'] ?? null;
         $this->sku              = $data['sku'];
         $this->package_size     = $data['package_size'];
         $this->package_unit     = $data['package_unit'] ?? null;
@@ -35,6 +41,8 @@ class ProductModel implements \JsonSerializable
         $this->weight_unit      = $data['weight_unit'] ?? 'g';
         $this->shelf_life_days  = $data['shelf_life_days'] ?? null;
         $this->photo_url        = $data['photo_url'] ?? null;
+        $this->availability     = is_array($data['availability'] ?? null) ? $data['availability'] : [];
+        $this->stock            = is_array($data['stock'] ?? null) ? $data['stock'] : [];
 
         if (isset($data['allergens'])) {
             foreach ($data['allergens'] as $allergen) {
@@ -53,6 +61,8 @@ class ProductModel implements \JsonSerializable
     public function getId()              { return $this->id; }
     public function getName()            { return $this->name; }
     public function getSupplierId()      { return $this->supplier_id; }
+    public function getCategoryId()      { return $this->category_id; }
+    public function getCategoryName()    { return $this->category_name; }
     public function getSku()             { return $this->sku; }
     public function getPackageSize()     { return $this->package_size; }
     public function getPackageUnit()     { return $this->package_unit; }
@@ -65,6 +75,8 @@ class ProductModel implements \JsonSerializable
     public function getShelfLifeDays()   { return $this->shelf_life_days; }
     public function getPhotoUrl()         { return $this->photo_url; }
     public function getSpecification()     { return $this->specification; }
+    public function getAvailability()       { return $this->availability; }
+    public function getStock()              { return $this->stock; }
 
     public function jsonSerialize(): mixed
     {
@@ -73,6 +85,8 @@ class ProductModel implements \JsonSerializable
             'name'             => $this->name,
             'allergens'        => $this->allergens,
             'supplier_id'      => $this->supplier_id,
+            'category_id'      => $this->category_id,
+            'category_name'    => $this->category_name,
             'sku'              => $this->sku,
             'package_size'     => $this->package_size,
             'package_unit'     => $this->package_unit,
@@ -84,6 +98,8 @@ class ProductModel implements \JsonSerializable
             'shelf_life_days'  => $this->shelf_life_days,
             'photo_url'        => $this->photo_url,
             'specification'    => $this->specification,
+            'availability'     => $this->availability,
+            'stock'            => $this->stock,
         ];
     }
 }

@@ -42,6 +42,14 @@ class CatalogProductController extends Controller
         return $this->json($resp, $resp['code']);
     }
 
+    #[Route('PUT', '/ajax/catalog/products/{id:\d+}/availability')]
+    public function ajaxUpdateAvailability($id)
+    {
+        $request = Request::createFromGlobals();
+        $resp = $this->catalogProductService->updateAvailability((int) $id, $this->getJson($request));
+        return $this->json($resp, $resp['code'] ?? 200);
+    }
+
     #[Route('POST', '/ajax/catalog/products/{id:\d+}/specification')]
     public function ajaxUpdateSpecification($id)
     {

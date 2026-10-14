@@ -70,6 +70,21 @@ class RecipeController extends Controller
         $this->view('recipes/show', $data);
     }
 
+    public function downloadPdf(string $id): void
+    {
+        $response = $this->recipeService->getPdf((int) $id);
+        if (empty($response['success'])) {
+            http_response_code((int) ($response['error'] ?? 500));
+            echo 'Unable to download recipe PDF.';
+            return;
+        }
+
+        $filename = $response['filename'] ?? 'recipe.pdf';
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $response['data'] ?? '';
+    }
+
     private function resolveDefaultPortionUnit(array $recipe): string
     {
 

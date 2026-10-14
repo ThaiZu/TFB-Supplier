@@ -283,5 +283,6 @@
     "steps_uploading": "Wysyłanie...",
     "steps_move_up": "Przesuń wyżej",
     "steps_move_down": "Przesuń niżej",
+    "recipes_download_pdf": "Pobierz recepturę PDF",
     "sales_unit_carton_exceeds_ingredients": "Łączna ilość w kartonie ({carton}) przekracza całkowitą ilość surowców receptury ({total}). Sprawdź rozmiar porcji lub ilości w opakowaniu."
 }

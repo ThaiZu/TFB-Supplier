@@ -99,6 +99,16 @@ return function (RouteCollector $r) {
         'method'     => 'generateCmrDocument',
     ]);
 
+    $r->addRoute('POST', '/ajax/orders/{orderId:\d+}/invoices', [
+        'controller' => \App\Supplier\app\Http\Controllers\Orders\OrdersController::class,
+        'method'     => 'createInvoice',
+    ]);
+
+    $r->addRoute('GET', '/orders/{orderId:\d+}/invoices/{invoiceId:\d+}/download', [
+        'controller' => \App\Supplier\app\Http\Controllers\Orders\OrdersController::class,
+        'method'     => 'downloadInvoice',
+    ]);
+
     $r->addRoute('GET', '/orders/{orderId:\d+}/documents/{documentId:\d+}/download', [
         'controller' => \App\Supplier\app\Http\Controllers\Orders\OrdersController::class,
         'method'     => 'downloadOrderDocument',

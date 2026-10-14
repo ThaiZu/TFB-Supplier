@@ -18,6 +18,11 @@ return function (RouteCollector $r) {
         'method'     => 'show',
     ]);
 
+    $r->addRoute('GET', '/recipes/{id:\d+}/pdf', [
+        'controller' => RecipeController::class,
+        'method'     => 'downloadPdf',
+    ]);
+
     // Kroki przygotowania receptury — widok
     $r->addRoute('GET', '/recipes/{recipeId:\d+}/steps', [
         'controller' => RecipeStepController::class,

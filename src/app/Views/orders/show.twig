@@ -132,6 +132,7 @@
         {% set canGenerateDifferencesDocument = 'generate_difference_document' in allowedActions %}
         {% set canGenerateReleaseDocument = 'generate_release_document' in allowedActions %}
         {% set canGenerateCmrDocument = 'generate_cmr_document' in allowedActions %}
+        {% set canCreateInvoice = (order.supplier_fulfillment_status ?? '') == 'FINALIZED' %}
         {% set generatedDocumentTypes = '|' %}
         {% for document in documents %}
             {% set documentType = (document.type ?? document.document_type ?? '')|upper %}
@@ -501,6 +502,7 @@
                     {% set differenceDocument = null %}
                     {% set releaseDocument = null %}
                     {% set cmrDocument = null %}
+                    {% set invoiceDocument = null %}
                     {% for document in documents %}
                         {% set documentTypeNormalized = (document.type ?? document.document_type ?? '')|upper %}
                         {% set documentStatusNormalized = (document.status ?? '')|upper %}
@@ -511,6 +513,8 @@
                             {% set releaseDocument = document %}
                         {% elseif not isDocumentVoided and documentTypeNormalized == 'CMR' and cmrDocument is null %}
                             {% set cmrDocument = document %}
+                        {% elseif not isDocumentVoided and documentTypeNormalized == 'INVOICE' and invoiceDocument is null %}
+                            {% set invoiceDocument = document %}
                         {% endif %}
                     {% endfor %}
                     <div>
@@ -532,6 +536,7 @@
                                 {% if cmrDocument %}
                                     {% set documentRows = documentRows|merge([{ type: 'CMR', document: cmrDocument, can_generate: false, button_id: '', button_kind: '', button_label: '', button_icon: 'bi-file-earmark-text' }]) %}
                                 {% endif %}
+                                {% set documentRows = documentRows|merge([{ type: 'INVOICE', document: invoiceDocument, can_generate: canCreateInvoice and invoiceDocument is null, button_id: 'documents-generate-invoice', button_kind: 'invoice', button_label: translations.orders_invoice_create|default('Utwórz fakturę'), button_icon: 'bi-receipt' }]) %}
                                 {% for row in documentRows %}
                                     {% set document = row.document %}
                                     {% set documentType = row.type %}
@@ -547,7 +552,7 @@
                                             <td><span class="badge bg-{{ isVoided ? 'secondary' : 'success' }}">{{ translations[statusKey] ?? documentStatus }}</span>{% if isVoided %}<div class="small text-muted mt-1">{{ translations.orders_documents_invalidated_hint }}</div>{% endif %}</td>
                                             <td class="text-end">
                                                 {% if document.id is defined and not isVoided %}
-                                                    <button type="button" class="btn btn-sm btn-outline-primary js-document-download" data-document-id="{{ document.id }}" data-document-number="{{ document.number ?? document.document_number ?? document.id }}">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary {{ documentType == 'INVOICE' ? 'js-invoice-download' : 'js-document-download' }}" data-document-id="{{ document.id }}" data-document-number="{{ document.number ?? document.document_number ?? document.id }}">
                                                         <i class="bi bi-download me-1"></i>{{ translations.orders_documents_download }}
                                                     </button>
                                                 {% else %}
@@ -569,7 +574,7 @@
                                         </tr>
                                     {% endif %}
                                 {% endfor %}
-                                {% if differenceDocument is null and releaseDocument is null and cmrDocument is null and not canGenerateDifferencesDocument and not canGenerateReleaseDocument %}
+                                {% if differenceDocument is null and releaseDocument is null and cmrDocument is null and invoiceDocument is null and not canGenerateDifferencesDocument and not canGenerateReleaseDocument and not canCreateInvoice %}
                                     <tr>
                                         <td colspan="5" class="text-muted">{{ translations.orders_details_no_documents }}</td>
                                     </tr>
@@ -639,6 +644,30 @@
             </div>
         </div>
     {% endif %}
+</div>
+
+<div class="modal fade" id="invoice-create-modal" tabindex="-1" aria-labelledby="invoice-create-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoice-create-modal-title">{{ translations.orders_invoice_create|default('Utwórz fakturę') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.orders_action_close|default('Zamknij') }}"></button>
+            </div>
+            <form id="invoice-create-form" novalidate>
+                <div class="modal-body">
+                    <label for="invoice-due-date" class="form-label">{{ translations.orders_invoice_due_date|default('Termin płatności') }}</label>
+                    <input type="date" class="form-control" id="invoice-due-date" required>
+                    <div class="invalid-feedback">{{ translations.orders_invoice_due_date_required|default('Termin płatności jest wymagany.') }}</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ translations.orders_action_close|default('Zamknij') }}</button>
+                    <button type="submit" class="btn btn-primary" id="invoice-create-confirm">
+                        <i class="bi bi-receipt me-1"></i>{{ translations.orders_invoice_create|default('Utwórz fakturę') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -2093,6 +2122,11 @@
 
     const orderId = panel.dataset.orderId;
     const generateButtons = Array.from(panel.querySelectorAll('.js-document-generate'));
+    const invoiceModalElement = document.getElementById('invoice-create-modal');
+    const invoiceForm = document.getElementById('invoice-create-form');
+    const invoiceDueDateInput = document.getElementById('invoice-due-date');
+    const invoiceConfirmButton = document.getElementById('invoice-create-confirm');
+    const invoiceModal = invoiceModalElement ? new bootstrap.Modal(invoiceModalElement) : null;
     let generateBusy = false;
 
     const td = {
@@ -2123,6 +2157,55 @@
         return resp?.description || resp?.message || fallback;
     }
 
+    function invoiceDefaultDueDate() {
+        const date = new Date();
+        date.setDate(date.getDate() + 14);
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    function invoiceToday() {
+        const date = new Date();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    async function createInvoice() {
+        if (!invoiceDueDateInput || !invoiceModal || generateBusy) return;
+        if (!invoiceDueDateInput.value) {
+            invoiceDueDateInput.classList.add('is-invalid');
+            invoiceDueDateInput.focus();
+            return;
+        }
+
+        generateBusy = true;
+        generateButtons.forEach((button) => { button.disabled = true; });
+        if (invoiceConfirmButton) invoiceConfirmButton.disabled = true;
+        try {
+            const resp = await api(`/ajax/orders/${orderId}/invoices`, { method: 'POST', data: { due_date: invoiceDueDateInput.value } });
+            if (resp.ok) {
+                invoiceModal.hide();
+                await Swal.fire({ icon: 'success', title: {{ translations.orders_invoice_create_success_title|default('Faktura utworzona')|json_encode|raw }}, text: {{ translations.orders_invoice_create_success_text|default('Faktura została dodana do dokumentów zamówienia.')|json_encode|raw }}, timer: 1200, showConfirmButton: false });
+                window.location.reload();
+                return;
+            }
+            Swal.fire({ icon: 'error', text: apiMessage(resp, {{ translations.orders_invoice_create_error|default('Nie udało się utworzyć faktury.')|json_encode|raw }}) });
+        } catch (error) {
+            Swal.fire({ icon: 'error', text: {{ translations.orders_invoice_create_error|default('Nie udało się utworzyć faktury.')|json_encode|raw }} });
+        } finally {
+            generateBusy = false;
+            generateButtons.forEach((button) => { button.disabled = false; });
+            if (invoiceConfirmButton) invoiceConfirmButton.disabled = false;
+        }
+    }
+
+    invoiceForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await createInvoice();
+    });
+
     panel.querySelectorAll('.js-document-download').forEach((button) => {
         button.addEventListener('click', async () => {
             button.disabled = true;
@@ -2141,10 +2224,36 @@
         });
     });
 
+    panel.querySelectorAll('.js-invoice-download').forEach((button) => {
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            try {
+                await downloadPdf(
+                    `/orders/${orderId}/invoices/${button.dataset.documentId}/download`,
+                    {},
+                    `invoice-${button.dataset.documentNumber || button.dataset.documentId}.pdf`,
+                    'GET'
+                );
+            } catch (error) {
+                Swal.fire({ icon: 'error', text: error.message || td.downloadError });
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
+
     generateButtons.forEach((generateButton) => {
         generateButton.addEventListener('click', async () => {
             if (generateBusy) return;
             const kind = generateButton.dataset.documentKind || 'difference';
+            if (kind === 'invoice') {
+                if (!invoiceModal || !invoiceDueDateInput) return;
+                invoiceDueDateInput.min = invoiceToday();
+                invoiceDueDateInput.value = invoiceDefaultDueDate();
+                invoiceDueDateInput.classList.remove('is-invalid');
+                invoiceModal.show();
+                return;
+            }
             const fallbackError = kind === 'release' ? td.generateReleaseError : td.generateError;
             generateBusy = true;
             generateButtons.forEach((button) => { button.disabled = true; });

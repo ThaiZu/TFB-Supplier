@@ -124,6 +124,18 @@ class SupplierOrderService
         return $this->orderRepository->generateCmrDocument($supplierId, $orderId);
     }
 
+    public function createInvoice(int $orderId, array $payload): array
+    {
+        $supplierId = GlobalRegistry::get('user')['supplier_id'];
+        return $this->orderRepository->createInvoice($supplierId, $orderId, $payload);
+    }
+
+    public function getInvoicePdf(int $orderId, int $invoiceId): array
+    {
+        $supplierId = GlobalRegistry::get('user')['supplier_id'];
+        return $this->orderRepository->getInvoicePdf($supplierId, $orderId, $invoiceId);
+    }
+
     public function getOrderDocument(int $orderId, int $documentId): array
     {
         $supplierId = GlobalRegistry::get('user')['supplier_id'];

@@ -13,7 +13,7 @@ class CategoryRepository
     {
     }
 
-    public function getAll($supplierId)
+    public function getAll(int $supplierId): array
     {
 
         $response = $this->apiClient->get("/material-suppliers/$supplierId/catalog/categories");
@@ -28,6 +28,20 @@ class CategoryRepository
         return $objects;
     }
 
+    public function insert(int $supplierId, array $data): array
+    {
+        return $this->apiClient->post("/material-suppliers/{$supplierId}/catalog/categories", $data);
+    }
+
+    public function update(int $supplierId, int $id, array $data): array
+    {
+        return $this->apiClient->patch("/material-suppliers/{$supplierId}/catalog/categories/{$id}", $data);
+    }
+
+    public function delete(int $supplierId, int $id): array
+    {
+        return $this->apiClient->delete("/material-suppliers/{$supplierId}/catalog/categories/{$id}");
+    }
 
 
 }

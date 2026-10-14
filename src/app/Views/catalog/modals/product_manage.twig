@@ -33,6 +33,14 @@
                         <input id="productName" class="form-control" placeholder="{{ translations.name_placeholder }}">
                         <div class="invalid-feedback" id="errName"></div>
                     </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="productCategory">{{ translations.category }}</label>
+                        <select id="productCategory" class="form-select">
+                            <option value="">{{ translations.no_category }}</option>
+                        </select>
+                        <div class="form-text">{{ translations.product_category_hint }}</div>
+                        <div class="invalid-feedback" id="errCategory"></div>
+                    </div>
                     <div class="col-12 col-md-4">
                         <label class="form-label">{{ translations.package_quantity }} *</label>
                         <input
@@ -90,7 +98,7 @@
                             {{ translations.cancel }}
                         </button>
                         <button class="btn btn-primary" id="btnSaveProduct">
-                            <i class="bi bi-check-lg me-1"></i>{{ translations.save }}
+                            <i class="bi bi-check me-1"></i>{{ translations.save }}
                         </button>
                     </div>
                 </div>

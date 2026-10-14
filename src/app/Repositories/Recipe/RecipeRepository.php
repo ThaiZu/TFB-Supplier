@@ -62,4 +62,9 @@ class RecipeRepository
     {
         return $this->apiClient->post("/material-suppliers/{$supplierId}/recipes/{$id}/overhead/recalculate", []);
     }
+
+    public function getPdf(int $supplierId, int $id): array
+    {
+        return $this->apiClient->get("/material-suppliers/{$supplierId}/recipes/{$id}/pdf", false);
+    }
 }

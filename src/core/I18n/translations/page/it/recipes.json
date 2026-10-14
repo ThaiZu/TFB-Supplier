@@ -287,5 +287,6 @@
     "steps_uploading": "Caricamento...",
     "steps_move_up": "Sposta su",
     "steps_move_down": "Sposta giù",
+    "recipes_download_pdf": "Scarica la ricetta in PDF",
     "sales_unit_carton_exceeds_ingredients": "La quantità totale nel cartone ({carton}) supera la quantità totale degli ingredienti della ricetta ({total}). Rivedere le dimensioni delle porzioni o le quantità di imballaggio."
 }

@@ -200,6 +200,21 @@ class OrdersController extends Controller
         return $this->proxyLifecycleResponse($this->orderService->generateCmrDocument((int) $orderId));
     }
 
+    #[Route('POST', '/ajax/orders/{orderId:\d+}/invoices')]
+    public function createInvoice(string $orderId): JsonResponse
+    {
+        return $this->proxyLifecycleResponse($this->orderService->createInvoice(
+            (int) $orderId,
+            $this->getJson(Request::createFromGlobals())
+        ));
+    }
+
+    #[Route('GET', '/orders/{orderId:\d+}/invoices/{invoiceId:\d+}/download')]
+    public function downloadInvoice(string $orderId, string $invoiceId): void
+    {
+        $this->streamPdfResponse($this->orderService->getInvoicePdf((int) $orderId, (int) $invoiceId));
+    }
+
     #[Route('GET', '/orders/{orderId:\d+}/documents/{documentId:\d+}/download')]
     public function downloadOrderDocument(string $orderId, string $documentId): void
     {
