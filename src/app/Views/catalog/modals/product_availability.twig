@@ -1,0 +1,60 @@
+<div class="modal fade" id="productAvailabilityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title">{{ translations.availability_stock_title }}</h5>
+                    <div class="small text-muted" id="availabilityProductName"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ translations.close }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-light-primary small">
+                    <i class="bi bi-info-circle me-1"></i>{{ translations.availability_stock_hint }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold" for="availabilityMode">{{ translations.availability_mode }}</label>
+                    <select id="availabilityMode" class="form-select">
+                        <option value="ALWAYS">{{ translations.availability_always }}</option>
+                        <option value="SCHEDULED">{{ translations.availability_scheduled }}</option>
+                    </select>
+                </div>
+
+                <div id="availabilityPeriodsSection" class="mb-4" style="display:none">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">{{ translations.availability_periods }}</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddAvailabilityPeriod">
+                            <i class="bi bi-plus-lg me-1"></i>{{ translations.add_period }}
+                        </button>
+                    </div>
+                    <div id="availabilityPeriodsList" class="d-flex flex-column gap-2"></div>
+                    <div class="form-text">{{ translations.availability_periods_hint }}</div>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="stockMode">{{ translations.stock_mode }}</label>
+                    <select id="stockMode" class="form-select">
+                        <option value="UNLIMITED">{{ translations.stock_unlimited }}</option>
+                        <option value="LIMITED">{{ translations.stock_limited }}</option>
+                    </select>
+                    <div class="form-text">{{ translations.stock_mode_hint }}</div>
+                </div>
+                <div id="stockOnHandSection" class="mb-2" style="display:none">
+                    <label class="form-label" for="stockOnHand">{{ translations.stock_on_hand }}</label>
+                    <input id="stockOnHand" type="number" step="0.001" min="0" class="form-control">
+                    <div class="form-text">{{ translations.stock_on_hand_hint }}</div>
+                    <div class="small text-muted mt-1" id="stockReservedInfo"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ translations.cancel }}</button>
+                <button type="button" class="btn btn-primary" id="btnSaveAvailability">
+                    <i class="bi bi-check me-1"></i>{{ translations.save }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
